@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전남소방학교 외부강사 조회</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B3A5F;
+    --text:#2C2C2A;
+    --text-sub:#5F5E5A;
+    --text-muted:#9AA5B1;
+    --border:#EFEDE7;
+    --border-input:#D9D6CF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Nanum Gothic', sans-serif;
+    background:#ffffff;
+    color:var(--text);
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px 60px 20px;}
+  header{
+    height:auto;
+    padding:24px 0;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  header .title{font-size:19px;font-weight:800;color:var(--navy);}
+  .badge{
+    height:24px;padding:0 12px;border-radius:12px;
+    background:var(--border);color:var(--text-sub);
+    font-size:12px;font-weight:700;
+    display:inline-flex;align-items:center;
+  }
+  .summary{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin:28px 0;
+  }
+  .card{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:18px;
+  }
+  .card .label{font-size:12px;color:var(--text-muted);margin-bottom:6px;}
+  .card .num{font-size:24px;font-weight:800;color:var(--navy);}
+
+  .toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  #search{
+    flex-grow:1;
+    min-width:200px;
+    height:42px;
+    border:1px solid var(--border-input);
+    border-radius:6px;
+    padding:0 14px;
+    font-size:14px;
+    font-family:'Nanum Gothic', sans-serif;
+  }
+  select.filter{
+    height:42px;
+    border:1px solid var(--border-input);
+    border-radius:6px;
+    padding:0 10px;
+    font-size:14px;
+    font-family:'Nanum Gothic', sans-serif;
+    color:var(--text-sub);
+    background:#fff;
+  }
+
+  .thumb{
+    width:36px;height:36px;border-radius:50%;
+    object-fit:cover;background:var(--border);
+    display:block;
+  }
+  .table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{width:100%;min-width:640px;border-collapse:collapse;margin-top:10px;}
+  th{
+    font-size:12px;color:var(--text-muted);font-weight:700;
+    text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);
+    white-space:nowrap;
+  }
+  td{
+    font-size:14px;padding:12px;border-bottom:1px solid #F5F4F1;
+    vertical-align:middle;white-space:nowrap;
+  }
+  tr.row{cursor:pointer;}
+  tr.row:hover{background:#FAFAF8;}
+  .status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:10px;}
+  .status.active{background:#EAF3DE;color:#27500A;}
+  .status.pending{background:#FAEEDA;color:#633806;}
+  .status.hold{background:#EFEDE7;color:#5F5E5A;}
+  .status.rejected{background:#FCEBEB;color:#791F1F;}
+  .status.other{background:var(--border);color:var(--text-sub);}
+  .route-badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
+  .route-badge.self{background:var(--border);color:var(--text-sub);}
+  .route-badge.invite{background:#DCE8F5;color:#1B3A5F;}
+
+  #empty, #loading{
+    padding:60px 0;text-align:center;color:var(--text-muted);font-size:14px;
+  }
+
+  /* 상세보기 패널 */
+  #overlay{
+    display:none;
+    position:fixed;inset:0;
+    background:rgba(20,20,19,0.4);
+    align-items:center;justify-content:center;
+    padding:20px;
+    z-index:10;
+  }
+  #detail{
+    background:#fff;
+    max-width:480px;width:100%;
+    max-height:86vh;
+    overflow-y:auto;
+    border-radius:10px;
+    padding:28px;
+  }
+  #detail .close{
+    float:right;
+    border:none;background:none;
+    font-size:14px;color:var(--text-sub);
+    cursor:pointer;
+  }
+  #detail h2{font-size:20px;margin:0 0 4px 0;}
+  #detail .sub{font-size:13px;color:var(--text-sub);margin-bottom:20px;}
+  #detail dl{margin:0;}
+  #detail dt{font-size:12px;color:var(--text-muted);margin-top:14px;}
+  #detail dd{font-size:14px;margin:2px 0 0 0;}
+  #detail .field-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0 16px;}
+  #detail .field-grid .fi{margin-top:14px;}
+  #detail .field-grid .fi.full{grid-column:1 / -1;}
+  #detail .field-grid .fk{font-size:12px;color:var(--text-muted);}
+  #detail .field-grid .fv{font-size:14px;margin:2px 0 0 0;word-break:break-word;}
+
+  /* 로그인 화면 */
+  #loginScreen{
+    max-width:360px;
+    margin:120px auto 0 auto;
+    padding:0 20px;
+    text-align:center;
+  }
+  #loginScreen .title{font-size:19px;font-weight:800;color:var(--navy);margin-bottom:6px;}
+  #loginScreen .sub{font-size:13px;color:var(--text-sub);margin-bottom:28px;}
+  #loginScreen input{
+    width:100%;height:46px;
+    border:1px solid var(--border-input);
+    border-radius:6px;
+    padding:0 14px;
+    font-size:15px;
+    font-family:'Nanum Gothic', sans-serif;
+    text-align:center;
+    margin-bottom:12px;
+  }
+  #loginScreen button{
+    width:100%;height:46px;
+    border:none;border-radius:6px;
+    background:var(--navy);color:#fff;
+    font-size:15px;font-weight:700;
+    font-family:'Nanum Gothic', sans-serif;
+    cursor:pointer;
+  }
+  #loginScreen button:disabled{background:var(--text-muted);}
+  #loginMsg{
+    margin-top:12px;font-size:13px;color:#A32D2D;
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="title">전남소방학교 외부강사 조회</div>
+  <div class="sub">담당자 전용 · 비밀번호를 입력해 주세요</div>
+  <form id="loginForm">
+    <input type="password" id="loginPassword" placeholder="비밀번호" required>
+    <button type="submit" id="loginBtn">로그인</button>
+    <div id="loginMsg">비밀번호가 올바르지 않습니다.</div>
+  </form>
+</div>
+
+<div id="app" style="display:none;">
+<div class="wrap">
+
+  <header>
+    <div class="title">전남소방학교 외부강사 조회</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="inviteOpenBtn" class="badge" style="border:none;cursor:pointer;font-family:'Nanum Gothic',sans-serif;background:#1B3A5F;color:#fff;">강사 초대</button>
+      <button id="schoolAdminBtn" class="badge" style="border:none;cursor:pointer;font-family:'Nanum Gothic',sans-serif;">학교소개 관리</button>
+      <span class="badge">담당자용</span>
+    </div>
+  </header>
+
+  <!-- 강사 초대 모달 -->
+  <div id="inviteOverlay" style="display:none;position:fixed;inset:0;background:rgba(20,20,19,0.45);z-index:60;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:10px;max-width:420px;width:100%;padding:24px;position:relative;">
+      <button id="inviteCloseX" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:18px;color:var(--text-muted);cursor:pointer;line-height:1;">×</button>
+      <div style="font-size:16px;font-weight:800;margin-bottom:4px;">신규 강사 초대</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;">이름·연락처·이메일만 입력하면, 강사가 직접 기본정보를 입력해 심사 없이 바로 등록되는 링크가 메일로 발송됩니다.</div>
+      <input type="text" id="inviteName" placeholder="성명" style="width:100%;height:42px;border:1px solid #D9D6CF;border-radius:6px;padding:0 10px;margin-bottom:8px;">
+      <input type="text" id="invitePhone" placeholder="연락처 (010-0000-0000)" style="width:100%;height:42px;border:1px solid #D9D6CF;border-radius:6px;padding:0 10px;margin-bottom:8px;">
+      <input type="email" id="inviteEmail" placeholder="이메일" style="width:100%;height:42px;border:1px solid #D9D6CF;border-radius:6px;padding:0 10px;margin-bottom:14px;">
+      <div id="inviteMsg" style="font-size:13px;margin-bottom:10px;display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="inviteCancelBtn" style="flex:1;height:42px;border:1px solid #D9D6CF;border-radius:6px;background:#fff;font-family:'Nanum Gothic',sans-serif;cursor:pointer;">취소</button>
+        <button id="inviteSubmitBtn" style="flex:1;height:42px;border:none;border-radius:6px;background:#1B3A5F;color:#fff;font-weight:700;font-family:'Nanum Gothic',sans-serif;cursor:pointer;">초대 링크 발송</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="card"><div class="label">전체 강사</div><div class="num" id="statTotal">-</div></div>
+    <div class="card"><div class="label">활성</div><div class="num" id="statActive">-</div></div>
+    <div class="card"><div class="label">승인대기</div><div class="num" id="statPending">-</div></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="강사명, 소속, 연락처로 검색">
+    <select class="filter" id="filterSpecialty">
+      <option value="">분야 전체</option>
+      <option value="직무교육">직무교육</option>
+      <option value="직무역량교육">직무역량교육</option>
+      <option value="소양교육">소양교육</option>
+    </select>
+    <select class="filter" id="filterRegion"><option value="">활동지역 전체</option></select>
+    <select class="filter" id="filterStatus">
+      <option value="">상태 전체</option>
+      <option value="활성">활성</option>
+      <option value="승인대기">승인대기</option>
+      <option value="보류중">보류중</option>
+      <option value="반려">반려</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-sub);border:1px solid var(--border);border-radius:6px;padding:0 12px;height:40px;cursor:pointer;">
+      <input type="checkbox" id="filterPending" style="width:auto;height:auto;">
+      배정받은 사람만 보기
+    </label>
+  </div>
+
+  <div id="loading">불러오는 중...</div>
+  <div id="empty" style="display:none;">조건에 맞는 강사가 없습니다.</div>
+
+  <div class="table-scroll">
+  <table id="table" style="display:none;">
+    <thead>
+      <tr>
+        <th>소속</th><th></th><th>강사명</th><th>연락처</th><th>직위/직책</th><th>강사구분</th><th>분야</th><th>활동지역</th><th>강의회차</th><th>상태</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  </div>
+
+</div>
+</div>
+
+<div id="overlay">
+  <div id="detail">
+    <button class="close" id="closeBtn">닫기 ✕</button>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<div id="schoolOverlay" style="display:none;position:fixed;inset:0;background:rgba(20,20,19,0.4);align-items:center;justify-content:center;padding:20px;z-index:20;">
+  <div style="background:#fff;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;border-radius:10px;padding:28px;">
+    <button id="schoolCloseBtn" style="float:right;border:none;background:none;font-size:14px;color:var(--text-sub);cursor:pointer;">닫기 ✕</button>
+    <h2 style="font-size:18px;margin:0 0 20px 0;">학교소개 페이지 관리</h2>
+    <form id="schoolForm">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">학교명</label><input type="text" data-key="학교명" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">주소</label><input type="text" data-key="주소" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">대표전화</label><input type="text" data-key="대표전화" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">담당부서</label><input type="text" data-key="담당부서" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">담당자연락처</label><input type="text" data-key="담당자연락처" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">교육가능인원</label><input type="text" data-key="교육가능인원" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">강의실안내</label><input type="text" data-key="강의실안내" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">숙박시설안내</label><input type="text" data-key="숙박시설안내" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">식당안내</label><input type="text" data-key="식당안내" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">주차안내</label><input type="text" data-key="주차안내" class="schoolField" style="width:100%;height:40px;border:1px solid var(--border-input);border-radius:6px;padding:0 10px;"></div>
+        <div>
+          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px;">학교 전경 사진</label>
+          <input type="file" id="schoolPhoto" accept="image/*" style="width:100%;">
+        </div>
+      </div>
+      <button type="submit" id="schoolSaveBtn" style="width:100%;height:46px;margin-top:22px;border:none;border-radius:6px;background:var(--navy);color:#fff;font-size:15px;font-weight:700;font-family:'Nanum Gothic',sans-serif;cursor:pointer;">저장하기</button>
+      <div id="schoolMsg" style="margin-top:12px;font-size:13px;display:none;"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+  var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwLgHlqLhN79N0Rc1ZvtmsOJH5ocu_5faU_qv62IKWEiUOHQ7_0sZNoG8sGSbGCV8e3/exec';
+
+  var allData = [];
+
+  function photoUrl(fileId, size){
+    if (!fileId) return '';
+    // size: 'thumb' 또는 'full' — 둘 다 드라이브 썸네일 방식(안정적)을 쓰고 해상도만 다르게
+    return size === 'full'
+      ? 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w400'
+      : 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w80';
+  }
+
+  function fileDownloadUrl(fileId){
+    return 'https://drive.google.com/uc?export=download&id=' + fileId;
+  }
+
+  function calcAge(birthStr){
+    if (!birthStr) return null;
+    var parts = String(birthStr).split('-');
+    if (parts.length !== 3) return null;
+    var b = new Date(parts[0], parts[1]-1, parts[2]);
+    if (isNaN(b.getTime())) return null;
+    var today = new Date();
+    var age = today.getFullYear() - b.getFullYear();
+    var m = today.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+    return age;
+  }
+
+  function statusClass(s){
+    if (s === '활성') return 'active';
+    if (s === '승인대기') return 'pending';
+    if (s === '보류중') return 'hold';
+    if (s === '반려') return 'rejected';
+    return 'other';
+  }
+
+  function routeBadge(routeVal){
+    var v = routeVal || '자진등록';
+    var cls = v === '자진등록' ? 'self' : 'invite';
+    return '<span class="route-badge ' + cls + '">' + v + '</span>';
+  }
+
+  function uniqueValues(list, key){
+    var set = {};
+    list.forEach(function(item){
+      if (item[key]) set[item[key]] = true;
+    });
+    return Object.keys(set).sort();
+  }
+
+  function populateFilter(selectEl, values){
+    values.forEach(function(v){
+      var opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function render(){
+    var q = document.getElementById('search').value.trim().toLowerCase();
+    var fSpecialty = document.getElementById('filterSpecialty').value;
+    var fRegion = document.getElementById('filterRegion').value;
+    var fStatus = document.getElementById('filterStatus').value;
+    var fPending = document.getElementById('filterPending').checked;
+
+    var filtered = allData.filter(function(d){
+      if (fSpecialty && d.전문분야 !== fSpecialty) return false;
+      if (fRegion && d.활동지역 !== fRegion) return false;
+      if (fStatus && d.상태 !== fStatus) return false;
+      if (fPending && !(d.배정대기 > 0)) return false;
+      if (q) {
+        var haystack = ((d.성명||'') + (d.소속||'') + (d.연락처||'')).toLowerCase();
+        if (haystack.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+
+    var tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+
+    document.getElementById('empty').style.display = filtered.length ? 'none' : 'block';
+    document.getElementById('table').style.display = filtered.length ? 'table' : 'none';
+
+    filtered.forEach(function(d){
+      var tr = document.createElement('tr');
+      tr.className = 'row';
+      var thumb = d.사진링크
+        ? '<img class="thumb" src="' + photoUrl(d.사진링크,'thumb') + '" alt="">'
+        : '<div class="thumb"></div>';
+      tr.innerHTML =
+        '<td>' + (d.소속||'') + '</td>' +
+        '<td>' + thumb + '</td>' +
+        '<td>' + (d.성명||'') + routeBadge(d.등록경로) + '</td>' +
+        '<td>' + (d.연락처||'') + '</td>' +
+        '<td>' + (d.직위||'') + '</td>' +
+        '<td>' + (d.강사구분||'') + '</td>' +
+        '<td>' + (d.전문분야||'') + '</td>' +
+        '<td>' + (d.활동지역||'') + '</td>' +
+        '<td>' + (d.강의회차 || 0) + '회</td>' +
+        '<td><span class="status ' + statusClass(d.상태) + '">' + (d.상태||'') + '</span></td>';
+      tr.addEventListener('click', function(){ openDetail(d); });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function openDetail(d){
+    var body = document.getElementById('detailBody');
+    var photoHtml = d.사진링크
+      ? '<img src="' + photoUrl(d.사진링크,'full') + '" style="width:112px;height:112px;object-fit:cover;border-radius:50%;flex-shrink:0;border:1px solid #EFEDE7;" alt="" onerror="this.style.display=\'none\';">'
+      : '';
+    var age = calcAge(d.생년월일);
+    var birthDisplay = d.생년월일 ? d.생년월일 + (age !== null ? ' (만 ' + age + '세)' : '') : '-';
+    var profileLinkHtml = d.프로필파일링크
+      ? '<a href="https://drive.google.com/file/d/' + d.프로필파일링크 + '/preview" target="_blank" style="color:var(--navy);font-weight:700;margin-right:14px;">미리보기</a>' +
+        '<a href="' + fileDownloadUrl(d.프로필파일링크) + '" target="_blank" style="color:var(--navy);font-weight:700;">다운로드</a>'
+      : '-';
+
+    body.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;">' +
+        '<div>' +
+          '<h2 style="margin:0;">' + (d.성명||'') + routeBadge(d.등록경로) + '</h2>' +
+          '<div class="sub">' + (d.소속||'') + (d.직위 ? ' · ' + d.직위 : '') + '</div>' +
+        '</div>' +
+        photoHtml +
+      '</div>' +
+      '<div class="field-grid">' +
+        '<div class="fi"><div class="fk">생년월일</div><div class="fv">' + birthDisplay + '</div></div>' +
+        '<div class="fi"><div class="fk">연락처</div><div class="fv">' + (d.연락처||'-') + '</div></div>' +
+        '<div class="fi full"><div class="fk">이메일</div><div class="fv">' + (d.이메일||'-') + '</div></div>' +
+        '<div class="fi"><div class="fk">강사구분</div><div class="fv">' + (d.강사구분||'-') + '</div></div>' +
+        '<div class="fi"><div class="fk">분야</div><div class="fv">' + (d.전문분야||'-') + '</div></div>' +
+        '<div class="fi"><div class="fk">교과목명</div><div class="fv">' + (d.교과목명||'-') + '</div></div>' +
+        '<div class="fi"><div class="fk">활동지역</div><div class="fv">' + (d.활동지역||'-') + '</div></div>' +
+        '<div class="fi"><div class="fk">강의회차</div><div class="fv">' + (d.강의회차 || 0) + '회</div></div>' +
+        '<div class="fi"><div class="fk">등록일</div><div class="fv">' + (d.등록일||'-') + '</div></div>' +
+        '<div class="fi full"><div class="fk">자격증·학위</div><div class="fv">' + (d.자격증학위||'-') + '</div></div>' +
+        '<div class="fi full"><div class="fk">약력</div><div class="fv">' + (d.약력||'-') + '</div></div>' +
+        '<div class="fi full"><div class="fk">프로필 파일</div><div class="fv">' + profileLinkHtml + '</div></div>' +
+        '<div class="fi"><div class="fk">상태</div><div class="fv"><span class="status ' + statusClass(d.상태) + '">' + (d.상태||'') + '</span></div></div>' +
+      '</div>' +
+      (d.상태 === '승인대기' || d.상태 === '보류중'
+        ? '<div id="approvalActions" style="display:flex;gap:10px;margin-top:20px;">' +
+            '<button id="approveBtn" style="flex:1;height:44px;border:none;border-radius:6px;background:#1B3A5F;color:#fff;font-size:14px;font-weight:700;font-family:\'Nanum Gothic\',sans-serif;cursor:pointer;">승인</button>' +
+            '<button id="holdBtn" style="flex:1;height:44px;border:1.5px solid #9AA5B1;border-radius:6px;background:#fff;color:#5F5E5A;font-size:14px;font-weight:700;font-family:\'Nanum Gothic\',sans-serif;cursor:pointer;">보류</button>' +
+            '<button id="rejectBtn" style="flex:1;height:44px;border:1.5px solid #A32D2D;border-radius:6px;background:#fff;color:#A32D2D;font-size:14px;font-weight:700;font-family:\'Nanum Gothic\',sans-serif;cursor:pointer;">반려</button>' +
+          '</div>'
+        : '') +
+      '<dt style="font-size:12px;color:var(--text-muted);margin-top:20px;">강의 이력</dt>' +
+      '<div id="historyBox" style="margin-top:8px;font-size:13px;color:var(--text-muted);">불러오는 중...</div>' +
+      (d.상태 === '활성'
+        ? '<button id="assignBtn" style="width:100%;height:44px;margin-top:20px;border:none;border-radius:6px;background:#1B3A5F;color:#fff;font-size:14px;font-weight:700;font-family:\'Nanum Gothic\',sans-serif;cursor:pointer;">강의 배정</button>' +
+          '<div id="assignForm" style="display:none;margin-top:14px;padding:16px;background:#F7F6F3;border-radius:8px;">' +
+            '<input type="text" id="assignLectureName" placeholder="과정명" style="width:100%;height:40px;border:1px solid #D9D6CF;border-radius:6px;padding:0 10px;margin-bottom:8px;">' +
+            '<input type="date" id="assignDate" style="width:100%;height:40px;border:1px solid #D9D6CF;border-radius:6px;padding:0 10px;margin-bottom:8px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+              '<select id="assignStartHour" style="flex:1;height:40px;border:1px solid #D9D6CF;border-radius:6px;padding:0 8px;background:#fff;"></select>' +
+              '<span style="color:var(--text-sub);font-size:13px;">~</span>' +
+              '<select id="assignEndHour" style="flex:1;height:40px;border:1px solid #D9D6CF;border-radius:6px;padding:0 8px;background:#fff;"></select>' +
+            '</div>' +
+            '<input type="text" id="assignSubject" placeholder="교과목" style="width:100%;height:40px;border:1px solid #D9D6CF;border-radius:6px;padding:0 10px;margin-bottom:8px;">' +
+            '<select id="assignCategory" style="width:100%;height:40px;border:1px solid #D9D6CF;border-radius:6px;padding:0 8px;background:#fff;margin-bottom:10px;">' +
+              '<option value="" disabled selected>구분 선택</option>' +
+              '<option value="직무교육">직무교육</option>' +
+              '<option value="직무역량교육">직무역량교육</option>' +
+              '<option value="소양교육">소양교육</option>' +
+            '</select>' +
+            '<button id="assignSubmitBtn" style="width:100%;height:42px;border:none;border-radius:6px;background:#1B3A5F;color:#fff;font-size:14px;font-weight:700;font-family:\'Nanum Gothic\',sans-serif;cursor:pointer;">배정 확정 및 메일 발송</button>' +
+          '</div>'
+        : '') +
+      '<div style="margin-top:28px;padding-top:16px;border-top:1px solid #F5F4F1;text-align:right;">' +
+        '<button id="deleteBtn" style="border:none;background:none;color:#A32D2D;font-size:12px;font-family:\'Nanum Gothic\',sans-serif;cursor:pointer;text-decoration:underline;">강사카드 삭제 (관리자 전용)</button>' +
+      '</div>';
+
+    document.getElementById('deleteBtn').addEventListener('click', function(){
+      var adminPw = prompt('삭제 권한 비밀번호를 입력해 주세요:', '');
+      if (adminPw === null) return;
+      if (!confirm('정말 "' + (d.성명||'') + '" 강사 카드를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+      var pw = sessionStorage.getItem('jsfa_dash_pw');
+      fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'deleteInstructor', 강사ID: d.강사ID, password: pw, adminPassword: adminPw })
+      })
+      .then(function(res){ return res.json(); })
+      .then(function(json){
+        if (json.status === 'ok') {
+          alert('삭제되었습니다.');
+          document.getElementById('overlay').style.display = 'none';
+          loadData(pw);
+        } else {
+          alert(json.message || '삭제 중 오류가 발생했습니다.');
+        }
+      })
+      .catch(function(){ alert('삭제 중 오류가 발생했습니다.'); });
+    });
+
+    var pw = sessionStorage.getItem('jsfa_dash_pw');
+
+    if (d.상태 === '승인대기' || d.상태 === '보류중') {
+      document.getElementById('approveBtn').addEventListener('click', function(){
+        var adminPw = prompt('승인 권한 비밀번호를 입력해 주세요:', '');
+        if (adminPw === null) return;
+        if (!confirm('이 강사를 승인하시겠습니까? 승인 즉시 강사님께 안내메일이 발송됩니다.')) return;
+        submitApproval(d.강사ID, '승인', null, adminPw);
+      });
+      document.getElementById('holdBtn').addEventListener('click', function(){
+        var adminPw = prompt('승인 권한 비밀번호를 입력해 주세요:', '');
+        if (adminPw === null) return;
+        if (!confirm('이 강사를 보류 처리하시겠습니까? 강사에게는 메일이 발송되지 않으며, 나중에 다시 승인/반려를 결정할 수 있습니다.')) return;
+        submitApproval(d.강사ID, '보류', null, adminPw);
+      });
+      document.getElementById('rejectBtn').addEventListener('click', function(){
+        var adminPw = prompt('승인 권한 비밀번호를 입력해 주세요:', '');
+        if (adminPw === null) return;
+        var reason = prompt('반려 사유(선택 입력, 강사에게 메일로 전달됩니다):', '');
+        if (reason === null) return; // 취소
+        if (!confirm('정말 반려 처리하시겠습니까?')) return;
+        submitApproval(d.강사ID, '반려', reason, adminPw);
+      });
+    }
+
+    if (d.상태 === '활성') {
+      document.getElementById('assignBtn').addEventListener('click', function(){
+        var form = document.getElementById('assignForm');
+        var willShow = form.style.display === 'none';
+        form.style.display = willShow ? 'block' : 'none';
+        if (willShow) {
+          var startSel = document.getElementById('assignStartHour');
+          var endSel = document.getElementById('assignEndHour');
+          if (!startSel.options.length) {
+            startSel.innerHTML = '<option value="" disabled selected>시작 시간</option>';
+            endSel.innerHTML = '<option value="" disabled selected>종료 시간</option>';
+            for (var h = 8; h <= 22; h++){
+              var label = h + '시';
+              var val = (h < 10 ? '0' + h : h) + ':00';
+              startSel.insertAdjacentHTML('beforeend', '<option value="' + val + '">' + label + '</option>');
+              endSel.insertAdjacentHTML('beforeend', '<option value="' + val + '">' + label + '</option>');
+            }
+          }
+        }
+      });
+      document.getElementById('assignSubmitBtn').addEventListener('click', function(){
+        var lectureName = document.getElementById('assignLectureName').value.trim();
+        var date = document.getElementById('assignDate').value;
+        var startVal = document.getElementById('assignStartHour').value;
+        var endVal = document.getElementById('assignEndHour').value;
+        var subject = document.getElementById('assignSubject').value.trim();
+        var category = document.getElementById('assignCategory').value;
+
+        if (!lectureName || !date) {
+          alert('과정명과 일자는 필수입니다.');
+          return;
+        }
+        if (!startVal || !endVal) {
+          alert('시작·종료 시간을 선택해 주세요.');
+          return;
+        }
+        if (startVal >= endVal) {
+          alert('종료 시간은 시작 시간보다 늦어야 합니다.');
+          return;
+        }
+        if (!category) {
+          alert('구분을 선택해 주세요.');
+          return;
+        }
+        var time = startVal + '~' + endVal;
+        if (!confirm('이 내용으로 강사님께 배정 안내메일을 발송하시겠습니까?')) return;
+
+        var linkBase = location.href.replace(/instructor-dashboard\.html.*$/, '');
+        var pw = sessionStorage.getItem('jsfa_dash_pw');
+
+        fetch(WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'assignLecture',
+            강사ID: d.강사ID,
+            강의명: lectureName,
+            일자: date,
+            시간: time,
+            교과목: subject,
+            구분: category,
+            linkBase: linkBase,
+            password: pw
+          })
+        })
+        .then(function(res){ return res.json(); })
+        .then(function(json){
+          if (json.status === 'ok') {
+            alert('배정 안내메일이 발송되었습니다.');
+            document.getElementById('overlay').style.display = 'none';
+          } else {
+            alert('오류: ' + (json.message || ''));
+          }
+        })
+        .catch(function(){ alert('발송 중 오류가 발생했습니다.'); });
+      });
+    }
+    fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getHistory', 강사ID: d.강사ID, password: pw })
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(json){
+      var box = document.getElementById('historyBox');
+      var list = json.data || [];
+      if (!list.length) {
+        box.textContent = '지난 강의 이력이 없습니다.';
+        return;
+      }
+      var totalHours = 0;
+      list.forEach(function(h){
+        if (!h.시간) return;
+        var parts = String(h.시간).split('~');
+        if (parts.length !== 2) return;
+        var start = parseInt(parts[0], 10);
+        var end = parseInt(parts[1], 10);
+        if (!isNaN(start) && !isNaN(end) && end > start) totalHours += (end - start);
+      });
+      var summary = '<div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;">총 ' + list.length + '회 · 누적 ' + totalHours + '시간</div>';
+      box.innerHTML = summary + list.map(function(h){
+        var links = '';
+        if (h.계획서링크) links += '<a href="' + fileDownloadUrl(h.계획서링크) + '" target="_blank" style="color:var(--navy);font-weight:700;font-size:12px;margin-right:12px;">강의계획서 다운로드</a>';
+        if (h.교안링크) links += '<a href="' + fileDownloadUrl(h.교안링크) + '" target="_blank" style="color:var(--navy);font-weight:700;font-size:12px;">교안 다운로드</a>';
+        return '<div style="padding:8px 0;border-bottom:1px solid #F5F4F1;">' +
+          '<div style="font-size:14px;color:var(--text);font-weight:700;">' + (h.강의명||'') + '</div>' +
+          '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">' + (h.일자||'') + (h.시간 ? ' · ' + h.시간 : '') + (h.교과목 ? ' · ' + h.교과목 : '') + (h.구분 ? ' · ' + h.구분 : '') + '</div>' +
+          (links ? '<div>' + links + '</div>' : '<div style="font-size:12px;color:var(--text-muted);">첨부된 자료 없음</div>') +
+        '</div>';
+      }).join('');
+    })
+    .catch(function(){
+      document.getElementById('historyBox').textContent = '이력을 불러오지 못했습니다.';
+    });
+  }
+
+  function submitApproval(instructorId, decision, reason, adminPw){
+    var pw = sessionStorage.getItem('jsfa_dash_pw');
+    var payload = { action: 'decideApproval', 강사ID: instructorId, decision: decision, password: pw, adminPassword: adminPw };
+    if (reason) payload.사유 = reason;
+
+    fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(json){
+      if (json.status === 'ok') {
+        alert(decision === '승인' ? '승인 처리되었습니다.' : '반려 처리되었습니다.');
+        document.getElementById('overlay').style.display = 'none';
+        loadData(pw);
+      } else {
+        alert('처리 중 오류가 발생했습니다: ' + (json.message || ''));
+      }
+    })
+    .catch(function(){
+      alert('처리 중 오류가 발생했습니다.');
+    });
+  }
+
+  document.getElementById('closeBtn').addEventListener('click', function(){
+    document.getElementById('overlay').style.display = 'none';
+  });
+  document.getElementById('overlay').addEventListener('click', function(e){
+    if (e.target.id === 'overlay') document.getElementById('overlay').style.display = 'none';
+  });
+
+  function fileToBase64(file){
+    return new Promise(function(resolve, reject){
+      if (!file) { resolve(null); return; }
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('inviteOpenBtn').addEventListener('click', function(){
+    document.getElementById('inviteName').value = '';
+    document.getElementById('invitePhone').value = '';
+    document.getElementById('inviteEmail').value = '';
+    document.getElementById('inviteMsg').style.display = 'none';
+    document.getElementById('inviteCancelBtn').textContent = '취소';
+    document.getElementById('inviteOverlay').style.display = 'flex';
+  });
+  document.getElementById('inviteCancelBtn').addEventListener('click', function(){
+    document.getElementById('inviteOverlay').style.display = 'none';
+  });
+  document.getElementById('inviteCloseX').addEventListener('click', function(){
+    document.getElementById('inviteOverlay').style.display = 'none';
+  });
+  document.getElementById('inviteSubmitBtn').addEventListener('click', function(){
+    var name = document.getElementById('inviteName').value.trim();
+    var phone = document.getElementById('invitePhone').value.trim();
+    var email = document.getElementById('inviteEmail').value.trim();
+    var msg = document.getElementById('inviteMsg');
+    if (!name || !phone || !email) {
+      msg.textContent = '성명, 연락처, 이메일을 모두 입력해 주세요.';
+      msg.style.color = '#791F1F'; msg.style.display = 'block';
+      return;
+    }
+    var btn = document.getElementById('inviteSubmitBtn');
+    btn.disabled = true; btn.textContent = '발송 중...';
+    var pw = sessionStorage.getItem('jsfa_dash_pw');
+    var linkBase = location.href.replace(/instructor-dashboard\.html.*$/, '');
+    fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'inviteSend', password: pw, 성명: name, 연락처: phone, 이메일: email, linkBase: linkBase })
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(json){
+      if (json.status === 'ok') {
+        msg.textContent = '초대 링크를 발송했습니다.';
+        msg.style.color = '#27500A'; msg.style.display = 'block';
+        document.getElementById('inviteCancelBtn').textContent = '닫기';
+      } else {
+        throw new Error(json.message || 'error');
+      }
+    })
+    .catch(function(){
+      msg.textContent = '발송 중 오류가 발생했습니다.';
+      msg.style.color = '#791F1F'; msg.style.display = 'block';
+    })
+    .finally(function(){
+      btn.disabled = false; btn.textContent = '초대 링크 발송';
+    });
+  });
+
+  document.getElementById('schoolAdminBtn').addEventListener('click', function(){
+    var pw = sessionStorage.getItem('jsfa_dash_pw');
+    fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getSchoolInfo' })
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(json){
+      var info = json.data || {};
+      document.querySelectorAll('.schoolField').forEach(function(input){
+        input.value = info[input.dataset.key] || '';
+      });
+      document.getElementById('schoolOverlay').style.display = 'flex';
+    });
+  });
+
+  document.getElementById('schoolCloseBtn').addEventListener('click', function(){
+    document.getElementById('schoolOverlay').style.display = 'none';
+  });
+
+  document.getElementById('schoolForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var msg = document.getElementById('schoolMsg');
+    msg.style.display = 'none';
+    var btn = document.getElementById('schoolSaveBtn');
+    btn.disabled = true;
+    btn.textContent = '저장 중...';
+
+    var fields = {};
+    document.querySelectorAll('.schoolField').forEach(function(input){
+      fields[input.dataset.key] = input.value.trim();
+    });
+
+    var photoFile = document.getElementById('schoolPhoto').files[0];
+    fileToBase64(photoFile).then(function(base64){
+      var payload = { action: 'updateSchoolInfo', password: sessionStorage.getItem('jsfa_dash_pw'), fields: fields };
+      if (base64) { payload.전경사진base64 = base64; payload.전경사진타입 = photoFile.type; }
+
+      return fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      if (data.status === 'ok') {
+        msg.textContent = '저장되었습니다.';
+        msg.style.color = '#27500A';
+        msg.style.display = 'block';
+      } else {
+        throw new Error();
+      }
+    })
+    .catch(function(){
+      msg.textContent = '저장 중 오류가 발생했습니다.';
+      msg.style.color = '#791F1F';
+      msg.style.display = 'block';
+    })
+    .finally(function(){
+      btn.disabled = false;
+      btn.textContent = '저장하기';
+    });
+  });
+
+  ['search'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', render);
+  });
+  ['filterSpecialty','filterRegion','filterStatus','filterPending'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', render);
+  });
+
+  function loadData(password){
+    return fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'list', password: password })
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(json){
+      if (json.status !== 'ok') throw new Error('auth');
+
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      sessionStorage.setItem('jsfa_dash_pw', password);
+
+      allData = json.data || [];
+      document.getElementById('loading').style.display = 'none';
+
+      document.getElementById('statTotal').textContent = allData.length + '명';
+      document.getElementById('statActive').textContent = allData.filter(function(d){return d.상태==='활성';}).length + '명';
+      document.getElementById('statPending').textContent = allData.filter(function(d){return d.상태==='승인대기';}).length + '명';
+
+      populateFilter(document.getElementById('filterRegion'), uniqueValues(allData, '활동지역'));
+
+      render();
+    });
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var pw = document.getElementById('loginPassword').value;
+    var btn = document.getElementById('loginBtn');
+    var msg = document.getElementById('loginMsg');
+    msg.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = '확인 중...';
+
+    loadData(pw)
+      .catch(function(){
+        msg.style.display = 'block';
+        sessionStorage.removeItem('jsfa_dash_pw');
+      })
+      .finally(function(){
+        btn.disabled = false;
+        btn.textContent = '로그인';
+      });
+  });
+
+  // 같은 브라우저 탭 세션 안에서는 다시 로그인하지 않도록 자동 시도
+  var savedPw = sessionStorage.getItem('jsfa_dash_pw');
+  if (savedPw) {
+    loadData(savedPw).catch(function(){ sessionStorage.removeItem('jsfa_dash_pw'); });
+  }
+</script>
+
+</body>
+</html>
